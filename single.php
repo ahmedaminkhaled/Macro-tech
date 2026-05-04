@@ -44,18 +44,66 @@ if (!$product) {
 }
 
 $imagePath = !empty($product['photo_path']) ? (string)$product['photo_path'] : 'assets/img/product-3.png';
+$pageTitle = trim((string)($product['designation'] ?? '')) !== ''
+    ? (string)$product['designation'] . ' - MacroTech'
+    : 'MacroTech - Product Details';
+$pageDescription = trim((string)($product['description'] ?? '')) !== ''
+    ? strip_tags((string)$product['description'])
+    : 'Explore product details and specifications at MacroTech.';
 
 $stmtRelated = db()->prepare(
-    'SELECT id, designation, brand, price, photo_path
+    'SELECT id, designation, brand, price, quantity, photo_path
      FROM products
      WHERE category_id = :category_id AND id <> :id
-     ORDER BY id DESC
-     LIMIT 8'
+    ORDER BY RAND()
+    LIMIT 4'
 );
 $stmtRelated->bindValue(':category_id', (int)$product['category_id'], PDO::PARAM_INT);
 $stmtRelated->bindValue(':id', (int)$product['id'], PDO::PARAM_INT);
 $stmtRelated->execute();
 $relatedProducts = $stmtRelated->fetchAll();
+
+if (count($relatedProducts) < 4) {
+    $relatedIds = array_map(static fn(array $item): int => (int)$item['id'], $relatedProducts);
+    $relatedIds[] = (int)$product['id'];
+
+    $placeholders = [];
+    $fallbackParams = [];
+    foreach ($relatedIds as $index => $relatedId) {
+        $placeholder = ':related_' . $index;
+        $placeholders[] = $placeholder;
+        $fallbackParams[$placeholder] = $relatedId;
+    }
+
+    $remaining = 4 - count($relatedProducts);
+    if ($remaining > 0) {
+        $stmtFallbackRelated = db()->prepare(
+            'SELECT id, designation, brand, price, quantity, photo_path
+             FROM products
+             WHERE id NOT IN (' . implode(', ', $placeholders) . ')
+             ORDER BY RAND()
+             LIMIT ' . $remaining
+        );
+
+        foreach ($fallbackParams as $placeholder => $relatedId) {
+            $stmtFallbackRelated->bindValue($placeholder, $relatedId, PDO::PARAM_INT);
+        }
+
+        $stmtFallbackRelated->execute();
+        $relatedProducts = array_merge($relatedProducts, $stmtFallbackRelated->fetchAll());
+    }
+}
+
+$stmtFeatured = db()->prepare(
+    'SELECT id, designation, price, photo_path
+     FROM products
+     WHERE id <> :id
+     ORDER BY RAND()
+     LIMIT 6'
+);
+$stmtFeatured->bindValue(':id', (int)$product['id'], PDO::PARAM_INT);
+$stmtFeatured->execute();
+$featuredProducts = $stmtFeatured->fetchAll();
 
 $searchCategories = [];
 try {
@@ -64,16 +112,55 @@ try {
 } catch (Throwable $e) {
     $searchCategories = [];
 }
+
+$stockQuantity = (int)$product['quantity'];
+if ($stockQuantity <= 0) {
+    $stockLabel = 'Out of stock';
+    $stockBadgeClass = 'bg-danger';
+} elseif ($stockQuantity <= 5) {
+    $stockLabel = 'Low stock';
+    $stockBadgeClass = 'bg-warning text-dark';
+} else {
+    $stockLabel = 'In stock';
+    $stockBadgeClass = 'bg-success';
+}
+
+$tagLinks = [];
+$tagLinks[] = [
+    'label' => $product['brand'],
+    'q' => $product['brand'],
+    'category_id' => (int)$product['category_id'],
+];
+$tagLinks[] = [
+    'label' => $product['category_name'],
+    'q' => $product['category_name'],
+    'category_id' => (int)$product['category_id'],
+];
+
+$keywords = preg_split('/\s+/', trim((string)$product['designation'])) ?: [];
+foreach (array_slice(array_values(array_filter(array_unique(array_map(static function (string $keyword): string {
+    return trim($keyword, "\t\n\r\0\x0B,.-_");
+}, $keywords)))), 0, 4) as $keyword) {
+    if ($keyword !== '') {
+        $tagLinks[] = [
+            'label' => $keyword,
+            'q' => $keyword,
+            'category_id' => (int)$product['category_id'],
+        ];
+    }
+}
+
+$tagLinks = array_slice($tagLinks, 0, 6);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="utf-8">
-    <title>Electro - Electronics Website Template</title>
+    <title><?= e($pageTitle) ?></title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="" name="keywords">
-    <meta content="" name="description">
+    <meta content="<?= e($pageDescription) ?>" name="description">
 
     <!-- Google Web Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -134,7 +221,7 @@ try {
                                 USD</small></a>
                         <div class="dropdown-menu rounded">
                             <a href="#" class="dropdown-item"> Euro</a>
-                            <a href="#" class="dropdown-item"> Dolar</a>
+                            <a href="#" class="dropdown-item"> Dollar</a>
                         </div>
                     </div>
                     
@@ -205,7 +292,7 @@ try {
                 <nav class="navbar navbar-expand-lg navbar-light bg-primary ">
                     <a href="" class="navbar-brand d-block d-lg-none">
                         <h1 class="display-5 text-secondary m-0"><i
-                                class="fas fa-shopping-bag text-white me-2"></i>Electro</h1>
+                                class="fas fa-shopping-bag text-white me-2"></i>MacroTech</h1>
                         <!-- <img src="assets/img/logo.png" alt="Logo"> -->
                     </a>
                     <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse"
@@ -277,123 +364,31 @@ try {
                     </div>
                     <div class="featured-product mb-4">
                         <h4 class="mb-3">Featured products</h4>
-                        <div class="featured-product-item">
-                            <div class="rounded me-4" style="width: 100px; height: 100px;">
-                                <img src="assets/img/product-3.png" class="img-fluid rounded" alt="Image">
-                            </div>
-                            <div>
-                                <h6 class="mb-2">SmartPhone</h6>
-                                <div class="d-flex mb-2">
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star"></i>
+                        <?php if (!empty($featuredProducts)): ?>
+                            <?php foreach ($featuredProducts as $featuredProduct): ?>
+                                <?php $featuredImage = !empty($featuredProduct['photo_path']) ? (string)$featuredProduct['photo_path'] : 'assets/img/product-3.png'; ?>
+                                <div class="featured-product-item">
+                                    <div class="rounded me-4" style="width: 100px; height: 100px;">
+                                        <img src="<?= e($featuredImage) ?>" class="img-fluid rounded" alt="<?= e($featuredProduct['designation']) ?>">
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-2"><?= e($featuredProduct['designation']) ?></h6>
+                                        <div class="d-flex mb-2">
+                                            <i class="fa fa-star text-secondary"></i>
+                                            <i class="fa fa-star text-secondary"></i>
+                                            <i class="fa fa-star text-secondary"></i>
+                                            <i class="fa fa-star text-secondary"></i>
+                                            <i class="fa fa-star"></i>
+                                        </div>
+                                        <div class="d-flex mb-2">
+                                            <h5 class="fw-bold me-2"><?= number_format((float)$featuredProduct['price'], 2) ?> $</h5>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="d-flex mb-2">
-                                    <h5 class="fw-bold me-2">2.99 $</h5>
-                                    <h5 class="text-danger text-decoration-line-through">4.11 $</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="featured-product-item">
-                            <div class="rounded me-4" style="width: 100px; height: 100px;">
-                                <img src="assets/img/product-4.png" class="img-fluid rounded" alt="Image">
-                            </div>
-                            <div>
-                                <h6 class="mb-2">Smart Camera</h6>
-                                <div class="d-flex mb-2">
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star"></i>
-                                </div>
-                                <div class="d-flex mb-2">
-                                    <h5 class="fw-bold me-2">2.99 $</h5>
-                                    <h5 class="text-danger text-decoration-line-through">4.11 $</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="featured-product-item">
-                            <div class="rounded me-4" style="width: 100px; height: 100px;">
-                                <img src="assets/img/product-5.png" class="img-fluid rounded" alt="Image">
-                            </div>
-                            <div>
-                                <h6 class="mb-2">Smart Camera</h6>
-                                <div class="d-flex mb-2">
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star"></i>
-                                </div>
-                                <div class="d-flex mb-2">
-                                    <h5 class="fw-bold me-2">2.99 $</h5>
-                                    <h5 class="text-danger text-decoration-line-through">4.11 $</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="featured-product-item">
-                            <div class="rounded me-4" style="width: 100px; height: 100px;">
-                                <img src="assets/img/product-6.png" class="img-fluid rounded" alt="Image">
-                            </div>
-                            <div>
-                                <h6 class="mb-2">Smart Camera</h6>
-                                <div class="d-flex mb-2">
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star"></i>
-                                </div>
-                                <div class="d-flex mb-2">
-                                    <h5 class="fw-bold me-2">2.99 $</h5>
-                                    <h5 class="text-danger text-decoration-line-through">4.11 $</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="featured-product-item">
-                            <div class="rounded me-4" style="width: 100px; height: 100px;">
-                                <img src="assets/img/product-7.png" class="img-fluid rounded" alt="Image">
-                            </div>
-                            <div>
-                                <h6 class="mb-2">Camera Leance</h6>
-                                <div class="d-flex mb-2">
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star"></i>
-                                </div>
-                                <div class="d-flex mb-2">
-                                    <h5 class="fw-bold me-2">2.99 $</h5>
-                                    <h5 class="text-danger text-decoration-line-through">4.11 $</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="featured-product-item">
-                            <div class="rounded me-4" style="width: 100px; height: 100px;">
-                                <img src="assets/img/product-8.png" class="img-fluid rounded" alt="Image">
-                            </div>
-                            <div>
-                                <h6 class="mb-2">Smart Camera</h6>
-                                <div class="d-flex mb-2">
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star text-secondary"></i>
-                                    <i class="fa fa-star"></i>
-                                </div>
-                                <div class="d-flex mb-2">
-                                    <h5 class="fw-bold me-2">2.99 $</h5>
-                                    <h5 class="text-danger text-decoration-line-through">4.11 $</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-center my-4">
-                            <a href="#" class="btn btn-primary px-4 py-3 rounded-pill w-100">Vew More</a>
-                        </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="alert alert-light border">No featured products available right now.</div>
+                        <?php endif; ?>
                     </div>
                     <a href="#">
                         <div class="position-relative">
@@ -409,16 +404,10 @@ try {
                     <div class="product-tags my-4">
                         <h4 class="mb-3">PRODUCT TAGS</h4>
                         <div class="product-tags-items bg-light rounded p-3">
-                            <a href="#" class="border rounded py-1 px-2 mb-2">New</a>
-                            <a href="#" class="border rounded py-1 px-2 mb-2">brand</a>
-                            <a href="#" class="border rounded py-1 px-2 mb-2">black</a>
-                            <a href="#" class="border rounded py-1 px-2 mb-2">white</a>
-                            <a href="#" class="border rounded py-1 px-2 mb-2">tablats</a>
-                            <a href="#" class="border rounded py-1 px-2 mb-2">phone</a>
-                            <a href="#" class="border rounded py-1 px-2 mb-2">camera</a>
-                            <a href="#" class="border rounded py-1 px-2 mb-2">drone</a>
-                            <a href="#" class="border rounded py-1 px-2 mb-2">talevision</a>
-                            <a href="#" class="border rounded py-1 px-2 mb-2">slaes</a>
+                            <?php foreach ($tagLinks as $tagLink): ?>
+                                <a href="shop.php?q=<?= urlencode((string)$tagLink['q']) ?>&category_id=<?= (int)$tagLink['category_id'] ?>"
+                                    class="border rounded py-1 px-2 mb-2 d-inline-block"><?= e($tagLink['label']) ?></a>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
@@ -437,6 +426,10 @@ try {
                             <h4 class="fw-bold mb-3"><?= e($product['designation']) ?></h4>
                             <p class="mb-3">Category: <?= e($product['category_name']) ?></p>
                             <h5 class="fw-bold mb-3"><?= number_format((float)$product['price'], 2) ?> $</h5>
+                            <div class="mb-3">
+                                <span class="badge <?= e($stockBadgeClass) ?> rounded-pill px-3 py-2"><?= e($stockLabel) ?></span>
+                                <span class="text-muted ms-2"><?= $stockQuantity ?> item<?= $stockQuantity === 1 ? '' : 's' ?> available</span>
+                            </div>
                             <div class="d-flex mb-4">
                                 <i class="fa fa-star text-secondary"></i>
                                 <i class="fa fa-star text-secondary"></i>
@@ -452,9 +445,9 @@ try {
                             </div>
                             <div class="d-flex flex-column mb-3">
                                 <small>Product SKU: <?= e($product['reference']) ?></small>
-                                <small>Available: <strong class="text-primary"><?= (int)$product['quantity'] ?> items in stock</strong></small>
+                                <small>Availability: <strong class="text-primary"><?= e($stockLabel) ?></strong></small>
                             </div>
-                            <p class="mb-4"><?= e((string)$product['description']) !== '' ? e($product['description']) : 'No detailed description available for this product.' ?></p>
+                            <p class="mb-4"><?= trim((string)$product['description']) !== '' ? e($product['description']) : 'No detailed description available for this product.' ?></p>
                             <p class="mb-4">Brand: <strong><?= e($product['brand']) ?></strong></p>
                             <div class="input-group quantity mb-5" style="width: 100px;">
                                 <div class="input-group-btn">
@@ -479,37 +472,32 @@ try {
                                     <button class="nav-link active border-white border-bottom-0" type="button"
                                         role="tab" id="nav-about-tab" data-bs-toggle="tab" data-bs-target="#nav-about"
                                         aria-controls="nav-about" aria-selected="true">Description</button>
-                                    
                                 </div>
                             </nav>
                             <div class="tab-content mb-5">
                                 <div class="tab-pane active" id="nav-about" role="tabpanel"
                                     aria-labelledby="nav-about-tab">
-                                    <p>Our new <b class="fw-bold">HPB12 / A12 battery</b> is rated at 2000mAh and
-                                        designed to power up Black and Decker / FireStorm line of 12V tools allowing
-                                        users to run multiple devices off the same battery pack. The HPB12 is compatible
-                                        with the following Black and Decker power tool models:
-                                    </p>
-                                    <b class="fw-bold">Black & Decker Drills and Drivers:</b>
-                                    <p class="small">BD12PSK, BDG1200K, BDGL12K, BDID1202, CD1200SK, CD12SFK, CDC1200K,
-                                        CDC120AK, CDC120ASB, CP122K, CP122KB, CP12K, CP12KB, EPC12, EPC126, EPC126BK,
-                                        EPC12CA, EPC12CABK, HP122K, HP122KD, HP126F2B, HP126F2K, HP126F3B, HP126F3K,
-                                        HP126FBH, HP126FSC, HP126FSH, HP126K, HP128F3B, HP12K, HP12KD, HPD1200, HPD1202,
-                                        HPD1202KF, HPD12K-2, PS122K, PS122KB, PS12HAK, SS12, SX3000, SX3500, XD1200,
-                                        XD1200K, XTC121
-                                    </p>
-                                    <b class="fw-bold">lack & Decker Impact Wrenches:</b>
-                                    <p class="small">SX5000, XTC12IK, XTC12IKH</p>
-                                    <b class="fw-bold">Black & Decker Multi-Tools:</b>
-                                    <p class="small">KC2000FK</p>
-                                    <b class="fw-bold">Black & Decker Nailers:</b>
-                                    <p class="small">BDBN1202</p>
-                                    <b class="fw-bold">Black & Decker Screwdrivers:</b>
-                                    <p class="small">HP9019K</p>
-                                    <b class="fw-bold mb-0">Best replacement for the following Black and Decker OEM
-                                        battery part numbers:</b>
-                                    <p class="small">HPB12, A12, A12EX, A12-XJ, A1712, B-8315, BD1204L, BD-1204L,
-                                        BPT1047, FS120B, FS120BX, FSB12.</p>
+                                    <p class="mb-3"><?= trim((string)$product['description']) !== '' ? e($product['description']) : 'No extended product description has been provided yet.' ?></p>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <div class="border rounded p-3 h-100 bg-light">
+                                                <h6 class="fw-bold mb-2">Brand</h6>
+                                                <p class="mb-0"><?= e($product['brand']) ?></p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="border rounded p-3 h-100 bg-light">
+                                                <h6 class="fw-bold mb-2">Category</h6>
+                                                <p class="mb-0"><?= e($product['category_name']) ?></p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="border rounded p-3 h-100 bg-light">
+                                                <h6 class="fw-bold mb-2">Availability</h6>
+                                                <p class="mb-0"><?= e($stockLabel) ?> (<?= $stockQuantity ?>)</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="tab-pane" id="nav-mission" role="tabpanel"
                                     aria-labelledby="nav-mission-tab">
@@ -569,7 +557,7 @@ try {
                             <div class="row g-4">
                                 <div class="col-lg-6">
                                     <div class="border-bottom rounded">
-                                        <input type="text" class="form-control border-0 me-4" placeholder="Yur Name *">
+                                        <input type="text" class="form-control border-0 me-4" placeholder="Your Name *">
                                     </div>
                                 </div>
                                 <div class="col-lg-6">
@@ -603,6 +591,44 @@ try {
                             </div>
                         </form>
                     </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mt-4">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h3 class="mb-0">Related Products</h3>
+                        <small class="text-muted"><?= count($relatedProducts) ?> item<?= count($relatedProducts) === 1 ? '' : 's' ?></small>
+                    </div>
+                    <?php if (!empty($relatedProducts)): ?>
+                        <div class="related-carousel owl-carousel">
+                            <?php foreach ($relatedProducts as $relatedProduct): ?>
+                                <?php
+                                $relatedImage = !empty($relatedProduct['photo_path']) ? (string)$relatedProduct['photo_path'] : 'assets/img/product-3.png';
+                                $relatedStock = (int)($relatedProduct['quantity'] ?? 0);
+                                $relatedStockLabel = $relatedStock <= 0 ? 'Out of stock' : ($relatedStock <= 5 ? 'Low stock' : 'In stock');
+                                $relatedStockClass = $relatedStock <= 0 ? 'bg-danger' : ($relatedStock <= 5 ? 'bg-warning text-dark' : 'bg-success');
+                                ?>
+                                <div class="border rounded p-3 bg-light h-100">
+                                    <div class="position-relative mb-3">
+                                        <img src="<?= e($relatedImage) ?>" class="img-fluid rounded w-100" style="height: 220px; object-fit: cover;" alt="<?= e($relatedProduct['designation']) ?>">
+                                        <span class="badge <?= e($relatedStockClass) ?> rounded-pill position-absolute top-0 end-0 m-2" style="z-index: 2;">
+                                            <?= e($relatedStockLabel) ?>
+                                        </span>
+                                    </div>
+                                    <h5 class="mb-2"><?= e($relatedProduct['designation']) ?></h5>
+                                    <p class="text-muted mb-2"><?= e($relatedProduct['brand']) ?></p>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <strong><?= number_format((float)$relatedProduct['price'], 2) ?> $</strong>
+                                        <small class="text-muted"><?= $relatedStock ?> in stock</small>
+                                    </div>
+                                    <a href="single.php?id=<?= (int)$relatedProduct['id'] ?>" class="btn btn-primary rounded-pill w-100">View Product</a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-light border mb-0">No related products found in this category yet.</div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -695,7 +721,7 @@ try {
                     <div class="footer-item d-flex flex-column">
                         <h4 class="text-primary mb-4">Information</h4>
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> About Us</a>
-                        <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Delivery infomation</a>
+                        <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Delivery information</a>
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Privacy Policy</a>
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Terms & Conditions</a>
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Warranty</a>
@@ -715,6 +741,9 @@ try {
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Track Your Order</a>
                     </div>
                 </div>
+            </div>
+            <div class="text-center mt-4 pt-4 border-top border-light">
+                <p class="mb-0 text-white-50">Worked on by Ahmed Amin Khaled and Rayen Belgith</p>
             </div>
         </div>
     </div>

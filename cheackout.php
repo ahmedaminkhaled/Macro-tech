@@ -102,7 +102,7 @@ $stockErrorMessage   = flash('error');
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Checkout – Electro</title>
+    <title>Checkout – MacroTech</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -144,7 +144,7 @@ $stockErrorMessage   = flash('error');
                                 USD</small></a>
                         <div class="dropdown-menu rounded">
                             <a href="#" class="dropdown-item"> Euro</a>
-                            <a href="#" class="dropdown-item"> Dolar</a>
+                            <a href="#" class="dropdown-item"> Dollar</a>
                         </div>
                     </div>
                     
@@ -214,7 +214,7 @@ $stockErrorMessage   = flash('error');
         <div class="col-12 col-lg-9">
             <nav class="navbar navbar-expand-lg navbar-light bg-primary">
                 <a href="" class="navbar-brand d-block d-lg-none">
-                    <h1 class="display-5 text-secondary m-0"><i class="fas fa-shopping-bag text-white me-2"></i>Electro</h1>
+                    <h1 class="display-5 text-secondary m-0"><i class="fas fa-shopping-bag text-white me-2"></i>MacroTech</h1>
                 </a>
                 <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
                     <span class="fa fa-bars fa-1x"></span>
@@ -427,7 +427,7 @@ $stockErrorMessage   = flash('error');
                     <div class="footer-item d-flex flex-column">
                         <h4 class="text-primary mb-4">Information</h4>
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> About Us</a>
-                        <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Delivery infomation</a>
+                        <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Delivery information</a>
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Privacy Policy</a>
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Terms & Conditions</a>
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Warranty</a>
@@ -447,6 +447,9 @@ $stockErrorMessage   = flash('error');
                         <a href="#" class=""><i class="fas fa-angle-right me-2"></i> Track Your Order</a>
                     </div>
                 </div>
+            </div>
+            <div class="text-center mt-4 pt-4 border-top border-light">
+                <p class="mb-0 text-white-50">Worked on by Ahmed Amin Khaled and Rayen Belgith</p>
             </div>
         </div>
     </div>
