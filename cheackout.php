@@ -104,6 +104,51 @@ $stockErrorMessage   = flash('error');
     <meta charset="utf-8">
     <title>Checkout – MacroTech</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <script>
+        (function () {
+            try {
+                var theme = localStorage.getItem('theme') || 'default';
+                var vars = {
+                    ocean: {
+                        '--bs-primary': '#0d6efd',
+                        '--bs-primary-rgb': '13, 110, 253',
+                        '--bs-secondary': '#20c997',
+                        '--bs-secondary-rgb': '32, 201, 151',
+                        '--bs-dark': '#0b132b',
+                        '--bs-dark-rgb': '11, 19, 43',
+                        '--bs-light': '#e7f1ff',
+                        '--bs-light-rgb': '231, 241, 255'
+                    },
+                    sunset: {
+                        '--bs-primary': '#ff6b6b',
+                        '--bs-primary-rgb': '255, 107, 107',
+                        '--bs-secondary': '#f7b267',
+                        '--bs-secondary-rgb': '247, 178, 103',
+                        '--bs-dark': '#3d2c2e',
+                        '--bs-dark-rgb': '61, 44, 46',
+                        '--bs-light': '#fff3e6',
+                        '--bs-light-rgb': '255, 243, 230'
+                    },
+                    forest: {
+                        '--bs-primary': '#2d6a4f',
+                        '--bs-primary-rgb': '45, 106, 79',
+                        '--bs-secondary': '#52b788',
+                        '--bs-secondary-rgb': '82, 183, 136',
+                        '--bs-dark': '#1b4332',
+                        '--bs-dark-rgb': '27, 67, 50',
+                        '--bs-light': '#e9f5ee',
+                        '--bs-light-rgb': '233, 245, 238'
+                    }
+                };
+                if (theme !== 'default' && vars[theme]) {
+                    document.documentElement.setAttribute('data-theme', theme);
+                    Object.keys(vars[theme]).forEach(function (key) {
+                        document.documentElement.style.setProperty(key, vars[theme][key]);
+                    });
+                }
+            } catch (e) {}
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -146,6 +191,12 @@ $stockErrorMessage   = flash('error');
                             <a href="#" class="dropdown-item"> Euro</a>
                             <a href="#" class="dropdown-item"> Dollar</a>
                         </div>
+                    </div>
+                    <div class="theme-switcher btn-group btn-group-sm ms-3" role="group" aria-label="Theme switcher">
+                        <button type="button" class="btn btn-outline-light theme-btn" data-theme="default">Default</button>
+                        <button type="button" class="btn btn-outline-light theme-btn" data-theme="ocean">Ocean</button>
+                        <button type="button" class="btn btn-outline-light theme-btn" data-theme="sunset">Sunset</button>
+                        <button type="button" class="btn btn-outline-light theme-btn" data-theme="forest">Forest</button>
                     </div>
                     
                     

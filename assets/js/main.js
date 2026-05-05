@@ -173,6 +173,85 @@
     });
 
 
+   // Theme switcher
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    const savedTheme = localStorage.getItem('theme') || 'default';
+    const themeVars = {
+        ocean: {
+            '--bs-primary': '#0d6efd',
+            '--bs-primary-rgb': '13, 110, 253',
+            '--bs-secondary': '#20c997',
+            '--bs-secondary-rgb': '32, 201, 151',
+            '--bs-dark': '#0b132b',
+            '--bs-dark-rgb': '11, 19, 43',
+            '--bs-light': '#e7f1ff',
+            '--bs-light-rgb': '231, 241, 255'
+        },
+        sunset: {
+            '--bs-primary': '#ff6b6b',
+            '--bs-primary-rgb': '255, 107, 107',
+            '--bs-secondary': '#f7b267',
+            '--bs-secondary-rgb': '247, 178, 103',
+            '--bs-dark': '#3d2c2e',
+            '--bs-dark-rgb': '61, 44, 46',
+            '--bs-light': '#fff3e6',
+            '--bs-light-rgb': '255, 243, 230'
+        },
+        forest: {
+            '--bs-primary': '#2d6a4f',
+            '--bs-primary-rgb': '45, 106, 79',
+            '--bs-secondary': '#52b788',
+            '--bs-secondary-rgb': '82, 183, 136',
+            '--bs-dark': '#1b4332',
+            '--bs-dark-rgb': '27, 67, 50',
+            '--bs-light': '#e9f5ee',
+            '--bs-light-rgb': '233, 245, 238'
+        }
+    };
+    const themeKeys = [
+        '--bs-primary',
+        '--bs-primary-rgb',
+        '--bs-secondary',
+        '--bs-secondary-rgb',
+        '--bs-dark',
+        '--bs-dark-rgb',
+        '--bs-light',
+        '--bs-light-rgb'
+    ];
+
+    const applyTheme = (theme) => {
+        const vars = themeVars[theme];
+        if (!vars) {
+            document.documentElement.removeAttribute('data-theme');
+            themeKeys.forEach((key) => document.documentElement.style.removeProperty(key));
+        } else {
+            document.documentElement.setAttribute('data-theme', theme);
+            Object.entries(vars).forEach(([key, value]) => {
+                document.documentElement.style.setProperty(key, value);
+            });
+        }
+        localStorage.setItem('theme', theme);
+        themeButtons.forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.theme === theme);
+        });
+    };
+
+    applyTheme(savedTheme);
+    themeButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            applyTheme(btn.dataset.theme || 'default');
+        });
+    });
+
+    document.addEventListener('click', (event) => {
+        const target = event.target.closest('.theme-btn');
+        if (!target) {
+            return;
+        }
+        applyTheme(target.dataset.theme || 'default');
+    });
+
+
    
 
 })(jQuery);

@@ -15,6 +15,67 @@
 }
 /*** Spinner End ***/
 
+/*** Theme Colors ***/
+:root {
+    --bs-primary: #f28b00;
+    --bs-primary-rgb: 242, 139, 0;
+    --bs-secondary: #0d6efd;
+    --bs-secondary-rgb: 13, 110, 253;
+    --bs-dark: #2b2b2b;
+    --bs-dark-rgb: 43, 43, 43;
+    --bs-light: #f8f9fa;
+    --bs-light-rgb: 248, 249, 250;
+}
+
+html[data-theme="ocean"],
+body[data-theme="ocean"] {
+    --bs-primary: #0d6efd;
+    --bs-primary-rgb: 13, 110, 253;
+    --bs-secondary: #20c997;
+    --bs-secondary-rgb: 32, 201, 151;
+    --bs-dark: #0b132b;
+    --bs-dark-rgb: 11, 19, 43;
+    --bs-light: #e7f1ff;
+    --bs-light-rgb: 231, 241, 255;
+}
+
+html[data-theme="sunset"],
+body[data-theme="sunset"] {
+    --bs-primary: #ff6b6b;
+    --bs-primary-rgb: 255, 107, 107;
+    --bs-secondary: #f7b267;
+    --bs-secondary-rgb: 247, 178, 103;
+    --bs-dark: #3d2c2e;
+    --bs-dark-rgb: 61, 44, 46;
+    --bs-light: #fff3e6;
+    --bs-light-rgb: 255, 243, 230;
+}
+
+html[data-theme="forest"],
+body[data-theme="forest"] {
+    --bs-primary: #2d6a4f;
+    --bs-primary-rgb: 45, 106, 79;
+    --bs-secondary: #52b788;
+    --bs-secondary-rgb: 82, 183, 136;
+    --bs-dark: #1b4332;
+    --bs-dark-rgb: 27, 67, 50;
+    --bs-light: #e9f5ee;
+    --bs-light-rgb: 233, 245, 238;
+}
+
+.theme-switcher .theme-btn {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-color: rgba(255, 255, 255, 0.6);
+    color: #fff;
+}
+
+.theme-switcher .theme-btn:hover,
+.theme-switcher .theme-btn.active {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
 .back-to-top {
     position: fixed;
     right: 30px;

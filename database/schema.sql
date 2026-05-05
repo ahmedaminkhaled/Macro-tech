@@ -53,6 +53,26 @@ CREATE INDEX idx_products_brand ON products(brand);
 CREATE INDEX idx_products_price ON products(price);
 
 -- -----------------------------------------------------
+-- 2.1) Product Comments
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS product_comments (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id INT UNSIGNED NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    email VARCHAR(190) NOT NULL,
+    comment TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_product_comments_product
+        FOREIGN KEY (product_id) REFERENCES products(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_product_comments_product ON product_comments(product_id);
+CREATE INDEX idx_product_comments_created ON product_comments(created_at);
+
+-- -----------------------------------------------------
 -- 3) Sales (header)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS sales (

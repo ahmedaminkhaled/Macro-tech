@@ -43,6 +43,65 @@ if (!$product) {
     redirect('404.php');
 }
 
+$commentErrors = [];
+$commentSuccess = '';
+
+if (isset($_GET['commented']) && $_GET['commented'] === '1') {
+    $commentSuccess = 'Your comment has been submitted.';
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_submit'])) {
+    $commentName = trim((string)($_POST['comment_name'] ?? ''));
+    $commentEmail = trim((string)($_POST['comment_email'] ?? ''));
+    $commentBody = trim((string)($_POST['comment_body'] ?? ''));
+
+    if ($commentName === '') {
+        $commentErrors[] = 'Name is required.';
+    }
+    if ($commentEmail === '' || !filter_var($commentEmail, FILTER_VALIDATE_EMAIL)) {
+        $commentErrors[] = 'A valid email is required.';
+    }
+    if ($commentBody === '') {
+        $commentErrors[] = 'Comment is required.';
+    }
+
+    if (empty($commentErrors)) {
+        try {
+            $stmtInsertComment = db()->prepare(
+                'INSERT INTO product_comments (product_id, name, email, comment)
+                 VALUES (:product_id, :name, :email, :comment)'
+            );
+            $stmtInsertComment->bindValue(':product_id', (int)$product['id'], PDO::PARAM_INT);
+            $stmtInsertComment->bindValue(':name', $commentName);
+            $stmtInsertComment->bindValue(':email', $commentEmail);
+            $stmtInsertComment->bindValue(':comment', $commentBody);
+            $stmtInsertComment->execute();
+
+            $redirectTarget = $productId > 0
+                ? 'single.php?id=' . (int)$productId . '&commented=1'
+                : 'single.php?reference=' . urlencode($reference) . '&commented=1';
+            redirect($redirectTarget);
+        } catch (Throwable $e) {
+            $commentErrors[] = 'Unable to save your comment right now. Please try again in a moment.';
+        }
+    }
+}
+
+$productComments = [];
+try {
+    $stmtComments = db()->prepare(
+        'SELECT name, email, comment, created_at
+         FROM product_comments
+         WHERE product_id = :product_id
+         ORDER BY created_at DESC'
+    );
+    $stmtComments->bindValue(':product_id', (int)$product['id'], PDO::PARAM_INT);
+    $stmtComments->execute();
+    $productComments = $stmtComments->fetchAll();
+} catch (Throwable $e) {
+    $productComments = [];
+}
+
 $imagePath = !empty($product['photo_path']) ? (string)$product['photo_path'] : 'assets/img/product-3.png';
 $pageTitle = trim((string)($product['designation'] ?? '')) !== ''
     ? (string)$product['designation'] . ' - MacroTech'
@@ -162,6 +221,52 @@ $tagLinks = array_slice($tagLinks, 0, 6);
     <meta content="" name="keywords">
     <meta content="<?= e($pageDescription) ?>" name="description">
 
+    <script>
+        (function () {
+            try {
+                var theme = localStorage.getItem('theme') || 'default';
+                var vars = {
+                    ocean: {
+                        '--bs-primary': '#0d6efd',
+                        '--bs-primary-rgb': '13, 110, 253',
+                        '--bs-secondary': '#20c997',
+                        '--bs-secondary-rgb': '32, 201, 151',
+                        '--bs-dark': '#0b132b',
+                        '--bs-dark-rgb': '11, 19, 43',
+                        '--bs-light': '#e7f1ff',
+                        '--bs-light-rgb': '231, 241, 255'
+                    },
+                    sunset: {
+                        '--bs-primary': '#ff6b6b',
+                        '--bs-primary-rgb': '255, 107, 107',
+                        '--bs-secondary': '#f7b267',
+                        '--bs-secondary-rgb': '247, 178, 103',
+                        '--bs-dark': '#3d2c2e',
+                        '--bs-dark-rgb': '61, 44, 46',
+                        '--bs-light': '#fff3e6',
+                        '--bs-light-rgb': '255, 243, 230'
+                    },
+                    forest: {
+                        '--bs-primary': '#2d6a4f',
+                        '--bs-primary-rgb': '45, 106, 79',
+                        '--bs-secondary': '#52b788',
+                        '--bs-secondary-rgb': '82, 183, 136',
+                        '--bs-dark': '#1b4332',
+                        '--bs-dark-rgb': '27, 67, 50',
+                        '--bs-light': '#e9f5ee',
+                        '--bs-light-rgb': '233, 245, 238'
+                    }
+                };
+                if (theme !== 'default' && vars[theme]) {
+                    document.documentElement.setAttribute('data-theme', theme);
+                    Object.keys(vars[theme]).forEach(function (key) {
+                        document.documentElement.style.setProperty(key, vars[theme][key]);
+                    });
+                }
+            } catch (e) {}
+        })();
+    </script>
+
     <!-- Google Web Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -223,6 +328,12 @@ $tagLinks = array_slice($tagLinks, 0, 6);
                             <a href="#" class="dropdown-item"> Euro</a>
                             <a href="#" class="dropdown-item"> Dollar</a>
                         </div>
+                    </div>
+                    <div class="theme-switcher btn-group btn-group-sm ms-3" role="group" aria-label="Theme switcher">
+                        <button type="button" class="btn btn-outline-light theme-btn" data-theme="default">Default</button>
+                        <button type="button" class="btn btn-outline-light theme-btn" data-theme="ocean">Ocean</button>
+                        <button type="button" class="btn btn-outline-light theme-btn" data-theme="sunset">Sunset</button>
+                        <button type="button" class="btn btn-outline-light theme-btn" data-theme="forest">Forest</button>
                     </div>
                     
                     
@@ -552,23 +663,40 @@ $tagLinks = array_slice($tagLinks, 0, 6);
                                 </div>
                             </div>
                         </div>
-                        <form action="#">
+                        <?php
+                        $commentAction = $productId > 0
+                            ? 'single.php?id=' . (int)$productId
+                            : 'single.php?reference=' . urlencode($reference);
+                        ?>
+                        <form action="<?= e($commentAction) ?>" method="post">
                             <h4 class="mb-5 fw-bold">Leave a Reply</h4>
+                            <?php if (!empty($commentErrors)): ?>
+                                <div class="alert alert-danger">
+                                    <ul class="mb-0">
+                                        <?php foreach ($commentErrors as $error): ?>
+                                            <li><?= e($error) ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($commentSuccess !== ''): ?>
+                                <div class="alert alert-success"><?= e($commentSuccess) ?></div>
+                            <?php endif; ?>
                             <div class="row g-4">
                                 <div class="col-lg-6">
                                     <div class="border-bottom rounded">
-                                        <input type="text" class="form-control border-0 me-4" placeholder="Your Name *">
+                                        <input type="text" name="comment_name" class="form-control border-0 me-4" placeholder="Your Name *" value="<?= e((string)($_POST['comment_name'] ?? '')) ?>">
                                     </div>
                                 </div>
                                 <div class="col-lg-6">
                                     <div class="border-bottom rounded">
-                                        <input type="email" class="form-control border-0" placeholder="Your Email *">
+                                        <input type="email" name="comment_email" class="form-control border-0" placeholder="Your Email *" value="<?= e((string)($_POST['comment_email'] ?? '')) ?>">
                                     </div>
                                 </div>
                                 <div class="col-lg-12">
                                     <div class="border-bottom rounded my-4">
-                                        <textarea name="" id="" class="form-control border-0" cols="30" rows="8"
-                                            placeholder="Your Review *" spellcheck="false"></textarea>
+                                        <textarea name="comment_body" class="form-control border-0" cols="30" rows="8"
+                                            placeholder="Your Review *" spellcheck="false"><?= e((string)($_POST['comment_body'] ?? '')) ?></textarea>
                                     </div>
                                 </div>
                                 <div class="col-lg-12">
@@ -583,13 +711,32 @@ $tagLinks = array_slice($tagLinks, 0, 6);
                                                 <i class="fa fa-star"></i>
                                             </div>
                                         </div>
-                                        <a href="#"
+                                        <button type="submit" name="comment_submit"
                                             class="btn btn-primary border border-secondary text-primary rounded-pill px-4 py-3">
-                                            Post Comment</a>
+                                            Post Comment</button>
                                     </div>
                                 </div>
                             </div>
                         </form>
+                        <div class="mt-4">
+                            <h4 class="mb-4 fw-bold">Customer Comments</h4>
+                            <?php if (!empty($productComments)): ?>
+                                <div class="d-flex flex-column gap-3">
+                                    <?php foreach ($productComments as $comment): ?>
+                                        <div class="border rounded p-4 bg-light">
+                                            <div class="d-flex justify-content-between flex-wrap mb-2">
+                                                <strong><?= e($comment['name']) ?></strong>
+                                                <small class="text-muted"><?= e(date('M d, Y', strtotime((string)$comment['created_at']))) ?></small>
+                                            </div>
+                                            <small class="text-muted d-block mb-2"><?= e($comment['email']) ?></small>
+                                            <p class="mb-0"><?= nl2br(e($comment['comment'])) ?></p>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="alert alert-light border">No comments yet. Be the first to leave one.</div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>
